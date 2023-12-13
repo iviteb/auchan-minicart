@@ -24,14 +24,16 @@ interface Props {
 const countCartItems = (
   countMode: MinicartTotalItemsType,
   allItems: OrderFormItem[],
-  packagesSkuIds: string[]
+  packagesSkuIds: string[],
+  sgrSkuIds: string[]
 ) => {
   // Filter only main products, remove assembly items from the count
   const items = allItems.filter(
     item =>
       item.parentItemIndex === null &&
       item.productId &&
-      !packagesSkuIds.includes(item.productId)
+      !packagesSkuIds.includes(item.productId) &&
+      !sgrSkuIds.includes(item.productId)
   )
 
   if (countMode === 'distinctAvailable') {
@@ -69,6 +71,7 @@ const MinicartIconButton: React.FC<Props> = props => {
   const { open, openBehavior, openOnHoverProp } = useMinicartState()
   const dispatch = useMinicartDispatch()
   const [packagesSkuIds, setPackagesSkuIds] = useState<string[]>([])
+  const [sgrSkuIds, setSgrSkuIds] = useState<string[]>([])
 
   useEffect(() => {
     let isSubscribed = true
@@ -77,7 +80,19 @@ const MinicartIconButton: React.FC<Props> = props => {
       (res: PackagesSkuIds) => {
         if (res && isSubscribed) {
           try {
-            setPackagesSkuIds(Object.values(res.data))
+            const { bagsSettings, sgrSettings } = res?.data ?? {}
+
+            setPackagesSkuIds(Object.values(bagsSettings))
+
+            const allSkuIds: string[] = []
+
+            Object.values(sgrSettings).forEach(sgrType => {
+              if (sgrType?.skuIds) {
+                allSkuIds.push(...sgrType.skuIds)
+              }
+            })
+
+            setSgrSkuIds(allSkuIds)
           } catch (error) {
             console.error('Error in packages feature.', error)
           }
@@ -92,7 +107,8 @@ const MinicartIconButton: React.FC<Props> = props => {
   const quantity = countCartItems(
     itemCountMode,
     orderForm.items,
-    packagesSkuIds
+    packagesSkuIds,
+    sgrSkuIds
   )
   const itemQuantity = loading ? 0 : quantity
   const { url: checkoutUrl } = useCheckoutURL()

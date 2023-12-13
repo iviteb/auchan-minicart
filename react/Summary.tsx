@@ -19,6 +19,7 @@ const Summary: FC<Props> = ({ classes }) => {
   } = useOrderForm()
 
   const [packagesSkuIds, setPackagesSkuIds] = useState<string[]>([])
+  const [sgrSkuIds, setSgrSkuIds] = useState<string[]>([])
 
   useEffect(() => {
     let isSubscribed = true
@@ -27,7 +28,19 @@ const Summary: FC<Props> = ({ classes }) => {
       (res: PackagesSkuIds) => {
         if (res && isSubscribed) {
           try {
-            setPackagesSkuIds(Object.values(res.data))
+            const { bagsSettings, sgrSettings } = res?.data ?? {}
+
+            setPackagesSkuIds(Object.values(bagsSettings))
+
+            const allSkuIds: string[] = []
+
+            Object.values(sgrSettings).forEach(sgrType => {
+              if (sgrType?.skuIds) {
+                allSkuIds.push(...sgrType.skuIds)
+              }
+            })
+
+            setSgrSkuIds(allSkuIds)
           } catch (error) {
             console.error('Error in packages feature.', error)
           }
@@ -54,13 +67,26 @@ const Summary: FC<Props> = ({ classes }) => {
     }, 0)
   }, [items, packagesSkuIds])
 
+  const sgrValue = useMemo(() => {
+    if (!sgrSkuIds.length) {
+      return
+    }
+    return items.reduce((total: number, item: OrderFormItem) => {
+      if (sgrSkuIds.includes(item.id)) {
+        return (
+          total + ((item?.listPrice as number) ?? 0) * (item?.quantity ?? 1)
+        )
+      }
+      return total
+    }, 0)
+  }, [items, sgrSkuIds])
+
   let newTotalizers = totalizers
 
+  newTotalizers = JSON.parse(JSON.stringify(totalizers))
+  const totalizerItems = newTotalizers.find((t: any) => t.id === 'Items')
+
   if (flegValue && typeof flegValue === 'number') {
-    newTotalizers = JSON.parse(JSON.stringify(totalizers))
-
-    const totalizerItems = newTotalizers.find((t: any) => t.id === 'Items')
-
     newTotalizers.push({
       id: 'Packaging',
       name: 'Taxa ambalare',
@@ -69,6 +95,16 @@ const Summary: FC<Props> = ({ classes }) => {
     })
 
     totalizerItems.value -= flegValue ?? 0
+  }
+
+  if (sgrValue && typeof sgrValue === 'number') {
+    newTotalizers.push({
+      id: 'SGR',
+      name: 'Garantie',
+      value: sgrValue,
+      __typename: 'Totalizer',
+    })
+    totalizerItems.value -= sgrValue ?? 0
   }
 
   const { handles } = useCssHandles(CSS_HANDLES, { classes })

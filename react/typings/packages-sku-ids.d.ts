@@ -1,9 +1,25 @@
 interface PackagesSkuIds {
   data: {
-    bioFlegBagId: string
-    insulationBagId: string
-    plasticBagId: string
-    paperBagId: string
+    bagsSettings: {
+      bioFlegBagId: string
+      insulationBagId: string
+      plasticBagId: string
+      paperBagId: string
+    }
+    sgrSettings: {
+      aluminumCanProducts: {
+        label: string
+        skuIds: string[]
+      }
+      glassBottleProducts: {
+        label: string
+        skuIds: string[]
+      }
+      plasticBottleProducts: {
+        label: string
+        skuIds: string[]
+      }
+    }
   }
   error: null | string
 }
