@@ -137,7 +137,7 @@ const Summary: FC<Props> = ({ classes }) => {
 
     const returnTotalizers = [...baseTotalizers, ...additionalTotalizers]
 
-    if (items.length === 2) {
+    if (items.length < 3 || items.length > 0) {
       fetchSettings()
     }
 
