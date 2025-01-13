@@ -11,6 +11,13 @@ interface Props {
   classes?: CssHandlesTypes.CustomClasses<typeof CSS_HANDLES>
 }
 
+interface Totalizer {
+  id: string
+  name: string
+  value: number
+  __typename: string
+}
+
 const Summary: FC<Props> = ({ classes }) => {
   const { useOrderForm } = OrderFormComponent
 
@@ -21,32 +28,36 @@ const Summary: FC<Props> = ({ classes }) => {
   const [packagesSkuIds, setPackagesSkuIds] = useState<string[]>([])
   const [sgrSkuIds, setSgrSkuIds] = useState<string[]>([])
 
+  const fetchSettings = () => {
+    fetchWithRetry('/_v/private/api/cart-bags-manager/app-settings', 3).then((res: PackagesSkuIds) => {
+      if (res) {
+        try {
+          const { bagsSettings, sgrSettings } = res?.data ?? {}
+
+          setPackagesSkuIds(Object.values(bagsSettings))
+
+          const allSkuIds: string[] = []
+
+          Object.values(sgrSettings).forEach(sgrType => {
+            if (sgrType?.skuIds) {
+              allSkuIds.push(...sgrType.skuIds)
+            }
+          })
+
+          setSgrSkuIds(allSkuIds)
+        } catch (error) {
+          console.error('Error in packages feature.', error)
+        }
+      }
+    })
+  }
+
   useEffect(() => {
     let isSubscribed = true
 
-    fetchWithRetry('/_v/private/api/cart-bags-manager/app-settings', 3).then(
-      (res: PackagesSkuIds) => {
-        if (res && isSubscribed) {
-          try {
-            const { bagsSettings, sgrSettings } = res?.data ?? {}
-
-            setPackagesSkuIds(Object.values(bagsSettings))
-
-            const allSkuIds: string[] = []
-
-            Object.values(sgrSettings).forEach(sgrType => {
-              if (sgrType?.skuIds) {
-                allSkuIds.push(...sgrType.skuIds)
-              }
-            })
-
-            setSgrSkuIds(allSkuIds)
-          } catch (error) {
-            console.error('Error in packages feature.', error)
-          }
-        }
-      }
-    )
+    if (isSubscribed) {
+      fetchSettings()
+    }
 
     return () => {
       isSubscribed = false
@@ -81,38 +92,6 @@ const Summary: FC<Props> = ({ classes }) => {
     }, 0)
   }, [items, sgrSkuIds])
 
-  let newTotalizers = totalizers
-
-  newTotalizers = JSON.parse(JSON.stringify(totalizers))
-  const totalizerItems = newTotalizers.find((t: { id: string }) => t.id === 'Items')
-
-  if (flegValue && typeof flegValue === 'number') {
-    newTotalizers.push({
-      id: 'Packaging',
-      name: 'Taxa ambalare',
-      value: flegValue,
-      __typename: 'Totalizer',
-    })
-
-    if (totalizerItems) {
-      totalizerItems.value -= flegValue ?? 0
-    }
-  }
-
-  if (sgrValue && typeof sgrValue === 'number') {
-    newTotalizers.push({
-      id: 'SGR',
-      name: 'Garantie',
-      value: sgrValue,
-      __typename: 'Totalizer',
-    })
-    if (totalizerItems) {
-      totalizerItems.value -= sgrValue ?? 0
-    }
-  }
-
-  const { handles } = useCssHandles(CSS_HANDLES, { classes })
-
   const originalValue =
     items?.reduce(
       (total: number, item: OrderFormItem) =>
@@ -120,6 +99,52 @@ const Summary: FC<Props> = ({ classes }) => {
         ((item?.listPrice as number) ?? 0) * (item?.quantity ?? 1),
       0
     ) ?? 0
+
+  const newTotalizers = useMemo(() => {
+    if (!items?.length) {
+      return []
+    }
+
+    const baseTotalizers = deepClone(totalizers)
+    const totalizerItems = baseTotalizers.find((t: Totalizer) => t.id === 'Items')
+
+    // Adjust items totalizer if it exists
+    if (totalizerItems) {
+      totalizerItems.value = originalValue - (flegValue + sgrValue)
+    }
+
+    const additionalTotalizers: Totalizer[] = []
+
+    // Add packaging totalizer if there's a value
+    if (flegValue > 0) {
+      additionalTotalizers.push({
+        id: 'Packaging',
+        name: 'Taxa ambalare',
+        value: flegValue,
+        __typename: 'Totalizer',
+      })
+    }
+
+    // Add SGR totalizer if there's a value
+    if (sgrValue > 0) {
+      additionalTotalizers.push({
+        id: 'SGR',
+        name: 'Garantie',
+        value: sgrValue,
+        __typename: 'Totalizer',
+      })
+    }
+
+    const returnTotalizers = [...baseTotalizers, ...additionalTotalizers]
+
+    if (items.length === 2) {
+      fetchSettings()
+    }
+
+    return returnTotalizers
+  }, [totalizers, items, originalValue, flegValue, sgrValue])
+
+  const { handles } = useCssHandles(CSS_HANDLES, { classes })
 
   return (
     <div className={`${handles.minicartSummary} ph4 ph6-l pt5`}>
@@ -132,6 +157,17 @@ const Summary: FC<Props> = ({ classes }) => {
       />
     </div>
   )
+}
+
+
+
+function deepClone<T>(obj: T): T {
+  try {
+    return JSON.parse(JSON.stringify(obj))
+  } catch (error) {
+    console.error('Error cloning object:', error)
+    return obj
+  }
 }
 
 export default Summary
