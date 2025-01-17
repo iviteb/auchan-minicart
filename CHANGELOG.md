@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ## [2.68.1] - 2025-01-17
+### Added
+- Logic to fetch the SGR and Bags settings more often
 
 ## [2.68.0] - 2024-09-05
 ### Added
