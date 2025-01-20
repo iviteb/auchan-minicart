@@ -22,7 +22,7 @@ const Summary: FC<Props> = ({ classes }) => {
   const { useOrderForm } = OrderFormComponent
 
   const {
-    orderForm: { totalizers, value, items, paymentData },
+    orderForm: { totalizers, value, items, paymentData }
   } = useOrderForm()
 
   const [packagesSkuIds, setPackagesSkuIds] = useState<string[]>([])
@@ -108,14 +108,12 @@ const Summary: FC<Props> = ({ classes }) => {
     const baseTotalizers = deepClone(totalizers)
     const totalizerItems = baseTotalizers.find((t: Totalizer) => t.id === 'Items')
 
-    // Adjust items totalizer if it exists
     if (totalizerItems) {
       totalizerItems.value = originalValue - (flegValue + sgrValue)
     }
 
     const additionalTotalizers: Totalizer[] = []
 
-    // Add packaging totalizer if there's a value
     if (flegValue > 0) {
       additionalTotalizers.push({
         id: 'Packaging',
@@ -125,7 +123,6 @@ const Summary: FC<Props> = ({ classes }) => {
       })
     }
 
-    // Add SGR totalizer if there's a value
     if (sgrValue > 0) {
       additionalTotalizers.push({
         id: 'SGR',
@@ -139,6 +136,12 @@ const Summary: FC<Props> = ({ classes }) => {
 
     if (items.length < 3 || items.length > 0) {
       fetchSettings()
+    }
+
+    const remainingItems = items.filter((item: any) => packagesSkuIds.includes(item.id) || sgrSkuIds.includes(item.id))
+
+    if (remainingItems.length === items.length) {
+      return [];
     }
 
     return returnTotalizers
