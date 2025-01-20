@@ -165,7 +165,6 @@ function deepClone<T>(obj: T): T {
   try {
     return JSON.parse(JSON.stringify(obj))
   } catch (error) {
-    console.error('Error cloning object:', error)
     return obj
   }
 }

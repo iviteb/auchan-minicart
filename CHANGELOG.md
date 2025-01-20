@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+- Extra http requests from Summary.tsx to cart bags manager for summary calculations
+
 ## [2.68.2] - 2025-01-17
 
 ## [2.68.1] - 2025-01-17
